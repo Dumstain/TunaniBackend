@@ -4,6 +4,10 @@ from .models import Datos, Usuario, Rol, Cooperativa, Artesano, Producto, Venta,
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework import exceptions
+from .models import Producto
+from .models import Fotos
+
+
 
 User = get_user_model()
 
@@ -85,7 +89,15 @@ class DetalleVentaSerializer(serializers.ModelSerializer):
         model = DetalleVenta
         fields = '__all__'
 
-class FotosSerializer(serializers.ModelSerializer):
+
+class FotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Fotos
-        fields = '__all__'
+        fields = ['imagen', 'producto']
+
+
+
+class ProductoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = ['id', 'nombre', 'precio', 'categoria', 'descripcion', 'material', 'stock', 'estado', 'artesano']
