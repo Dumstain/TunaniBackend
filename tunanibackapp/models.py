@@ -78,6 +78,12 @@ class Artesano(models.Model):
         return f"{self.nombre} {self.apellido_paterno} {self.apellido_materno}"
 
 class Producto(models.Model):
+    # Opciones para el estado del producto
+    ESTADO_OPCIONES = (
+        ('publicado', 'Publicado'),
+        ('no_publicado', 'No Publicado'),
+    )
+
     nombre = models.CharField(max_length=45)
     precio = models.FloatField()
     categoria = models.CharField(max_length=45)
@@ -85,6 +91,8 @@ class Producto(models.Model):
     material = models.CharField(max_length=45)
     stock = models.IntegerField()
     artesano = models.ForeignKey(Artesano, on_delete=models.CASCADE)
+    # Agregamos el campo estado con las opciones definidas
+    estado = models.CharField(max_length=12, choices=ESTADO_OPCIONES, default='no_publicado')
 
     def __str__(self):
         return self.nombre
