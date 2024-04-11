@@ -19,6 +19,10 @@ from .serializers import ProductoSerializer
 from rest_framework.decorators import api_view
 from rest_framework.parsers import MultiPartParser, FormParser
 from .serializers import FotoSerializer
+from .serializers import ArtesanoSerializer
+from .models import Artesano
+from .models import Cooperativa
+from .serializers import CooperativaSerializer
 
 
 
@@ -80,6 +84,47 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         # Aquí puedes añadir lógica adicional si es necesario antes de eliminar el usuario
         return super().destroy(request, *args, **kwargs)
     
+
+class ListaArtesanosAPIView(APIView):
+    def get(self, request):
+        artesanos = Artesano.objects.all()
+        serializer = ArtesanoSerializer(artesanos, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class AgregarArtesanoAPIView(APIView):
+    def post(self, request):
+        serializer = ArtesanoSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class EliminarArtesanoAPIView(APIView):
+    
+    # Eliminar un artesano específico
+    def delete(self, request, pk):
+        try:
+            artesano = Artesano.objects.get(pk=pk)
+            artesano.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Artesano.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+class ListaCooperativasAPIView(APIView):
+    """
+    Lista todas las cooperativas.
+    """
+    def get(self, request, format=None):
+        cooperativas = Cooperativa.objects.all()
+        serializer = CooperativaSerializer(cooperativas, many=True)
+        return Response(serializer.data)
+    
+    
+class ListaProductosAPIView(APIView):
+    def get(self, request):
+        productos = Producto.objects.all()
+        serializer = ProductoSerializer(productos, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)    
     
 class CrearProductoAPIView(APIView):
     def post(self, request):
