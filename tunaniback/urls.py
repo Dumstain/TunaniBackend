@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from tunanibackapp.views import LoginAPIView
-from tunanibackapp.views import RegistroUsuarioAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
+from tunanibackapp.views import RegistroUsuarioAPIView,UsuarioRepresentanteDetalle,CooperativaView,ActualizarArtesanoAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -33,9 +33,12 @@ urlpatterns = [
     path('api/productos/borrar/<int:pk>/', BorrarProductoAPIView.as_view(), name='borrar_producto'),
     path('api/productos/<int:producto_id>/agregar-fotos/', AgregarFotosAPIView.as_view(), name='agregar_fotos_producto'),
     path('api/artesanos/', ListaArtesanosAPIView.as_view(), name='lista_artesanos'),
+    path('api/artesanos/actualizar/<int:pk>/', ActualizarArtesanoAPIView.as_view(), name='actualizar_artesano'),
     path('api/artesanos/agregar/', AgregarArtesanoAPIView.as_view(), name='agregar_artesano'),
     path('api/artesanos/eliminar/<int:pk>/', EliminarArtesanoAPIView.as_view(), name='eliminar_artesano'),
     path('api/cooperativas/', ListaCooperativasAPIView.as_view(), name='lista-cooperativas'),
+    path('api/cooperativa/<int:usuario_id>/', CooperativaView.as_view(), name='cooperativa_por_usuario'),
+    path('api/usuario/representante/<int:pk>/', UsuarioRepresentanteDetalle.as_view(), name='detalle-usuario-representante'),
 
 
 ]
