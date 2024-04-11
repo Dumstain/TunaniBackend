@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from tunanibackapp.views import LoginAPIView
-from tunanibackapp.views import RegistroUsuarioAPIView,CrearProductoAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView
+from tunanibackapp.views import RegistroUsuarioAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -27,9 +27,15 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/login/', LoginAPIView.as_view(), name='api_login'),
     path('registro/', RegistroUsuarioAPIView.as_view(), name='registro_usuario'),
+    path('api/productos/', ListaProductosAPIView.as_view(), name='lista_productos'),
     path('api/productos/crear/', CrearProductoAPIView.as_view(), name='crear_producto'),
     path('api/productos/modificar/<int:pk>/', ModificarProductoAPIView.as_view(), name='modificar_producto'),
     path('api/productos/borrar/<int:pk>/', BorrarProductoAPIView.as_view(), name='borrar_producto'),
     path('api/productos/<int:producto_id>/agregar-fotos/', AgregarFotosAPIView.as_view(), name='agregar_fotos_producto'),
+    path('api/artesanos/', ListaArtesanosAPIView.as_view(), name='lista_artesanos'),
+    path('api/artesanos/agregar/', AgregarArtesanoAPIView.as_view(), name='agregar_artesano'),
+    path('api/artesanos/eliminar/<int:pk>/', EliminarArtesanoAPIView.as_view(), name='eliminar_artesano'),
+    path('api/cooperativas/', ListaCooperativasAPIView.as_view(), name='lista-cooperativas'),
+
 
 ]
