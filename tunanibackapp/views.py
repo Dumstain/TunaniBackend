@@ -47,6 +47,7 @@ class LoginAPIView(APIView):
             "token": str(token.token),
             "usuario": usuario.nombre_user,
             "rol": usuario.rol.nombre_rol,  # Asegúrate de que tu modelo Rol tenga un campo 'nombre_rol'
+            "id":usuario.id,
             "mensaje": f"Has sido logeado como {usuario.rol.nombre_rol}"
         }
 
@@ -84,6 +85,16 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         # Aquí puedes añadir lógica adicional si es necesario antes de eliminar el usuario
         return super().destroy(request, *args, **kwargs)
     
+    
+class UsuarioRepresentanteDetalle(APIView):
+    def get(self, request, pk):
+        try:
+            usuario = Usuario.objects.get(pk=pk, rol=2)  # Asumiendo que el rol 2 corresponde a representante
+            serializer = UsuarioSerializer(usuario)
+            return Response(serializer.data)
+        except Usuario.DoesNotExist:
+            return Response({'mensaje': 'El usuario representante no existe'}, status=status.HTTP_404_NOT_FOUND)   
+    
 
 class ListaArtesanosAPIView(APIView):
     def get(self, request):
@@ -110,6 +121,19 @@ class EliminarArtesanoAPIView(APIView):
         except Artesano.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         
+class ActualizarArtesanoAPIView(APIView):
+    def put(self, request, pk):
+        try:
+            artesano = Artesano.objects.get(pk=pk)
+        except Artesano.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = ArtesanoSerializer(artesano, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
 class ListaCooperativasAPIView(APIView):
     """
     Lista todas las cooperativas.
@@ -118,6 +142,16 @@ class ListaCooperativasAPIView(APIView):
         cooperativas = Cooperativa.objects.all()
         serializer = CooperativaSerializer(cooperativas, many=True)
         return Response(serializer.data)
+    
+    
+class CooperativaView(APIView):
+    def get(self, request, usuario_id):
+        try:
+            cooperativa = Cooperativa.objects.get(usuario=usuario_id)
+            serializer = CooperativaSerializer(cooperativa)
+            return Response(serializer.data)
+        except Cooperativa.DoesNotExist:
+            return Response({'error': 'No se encontró la cooperativa asociada al usuario'}, status=status.HTTP_404_NOT_FOUND)
     
     
 class ListaProductosAPIView(APIView):
