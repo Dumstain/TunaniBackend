@@ -16,8 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.conf import settings
 from tunanibackapp.views import LoginAPIView
-from tunanibackapp.views import RegistroUsuarioAPIView,UsuarioRepresentanteDetalle,CooperativaView,ActualizarArtesanoAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
+from tunanibackapp.views import PedidosEnProcesoAPIView, CooperativaPaqueteriaAPIView, get_product_images,AgregarFotosAPIView,RegistroUsuarioAPIView,UsuarioRepresentanteDetalle,CooperativaView,ActualizarArtesanoAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
+from django.conf.urls.static import static
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -39,6 +41,9 @@ urlpatterns = [
     path('api/cooperativas/', ListaCooperativasAPIView.as_view(), name='lista-cooperativas'),
     path('api/cooperativa/<int:usuario_id>/', CooperativaView.as_view(), name='cooperativa_por_usuario'),
     path('api/usuario/representante/<int:pk>/', UsuarioRepresentanteDetalle.as_view(), name='detalle-usuario-representante'),
+    path('api/subir-foto/', AgregarFotosAPIView.as_view(), name='subir_foto'),
+    path('api/producto/<int:producto_id>/imagenes/', get_product_images, name='producto_imagenes'),
+    path('api/cooperativas/<int:cooperativa_id>/paqueteria/', CooperativaPaqueteriaAPIView.as_view(), name='cooperativa-paqueteria'),
+    path('api/cooperativas/<int:cooperativa_id>/pedidos-en-proceso/', PedidosEnProcesoAPIView.as_view(), name='pedidos-en-proceso'),
 
-
-]
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

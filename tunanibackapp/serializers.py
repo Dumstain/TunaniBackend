@@ -1,11 +1,13 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import Datos, Usuario, Rol, Cooperativa, Artesano, Producto, Venta, Comentario, DetalleVenta, Fotos
+from .models import Datos, Usuario, Rol, Cooperativa, Artesano, Producto, Venta, Comentario, DetalleVenta, Fotos, Paqueteria
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework import exceptions
 from .models import Producto
 from .models import Fotos
+from django.conf import settings
+from .models import DetalleVenta
 
 
 
@@ -68,36 +70,88 @@ class ArtesanoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Artesano
         fields = '__all__'
+        
+class FotoSerializer(serializers.ModelSerializer):
+    imagen_url = serializers.SerializerMethodField()
 
+    class Meta:
+        model = Fotos
+        fields = ['id', 'ubicacion', 'imagen_url', 'producto']  # Añadir 'ubicacion' y 'producto' para manejar la carga
+
+    def get_imagen_url(self, obj):
+        if obj.ubicacion and hasattr(obj.ubicacion, 'url'):
+            return obj.ubicacion.url
+        return None
+
+    def create(self, validated_data):
+        # Aquí se crea la instancia de Fotos y se guarda, incluyendo el archivo de imagen y la relación con Producto
+        return Fotos.objects.create(**validated_data)
+    
 class ProductoSerializer(serializers.ModelSerializer):
+    imagen_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = Producto
-        fields = '__all__'
+        fields = ['id', 'nombre', 'precio', 'categoria', 'descripcion', 'material', 'stock', 'estado', 'artesano', 'fotos']
 
-class VentaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Venta
-        fields = '__all__'
+    def get_imagen_url(self, obj):
+        request = self.context.get('request')
+        if obj.imagen and hasattr(obj.imagen, 'url'):
+            return request.build_absolute_uri(obj.imagen.url)
+        else:
+            return None
 
+        
 class ComentarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comentario
         fields = '__all__'
 
 class DetalleVentaSerializer(serializers.ModelSerializer):
+    producto = ProductoSerializer()
+
     class Meta:
         model = DetalleVenta
-        fields = '__all__'
+        fields = ['producto', 'cantidad', 'precio']
 
+class VentaSerializer(serializers.ModelSerializer):
+    detalles = DetalleVentaSerializer(source='detalleventa_set', many=True)
+
+    class Meta:
+        model = Venta
+        fields = ['id', 'fecha', 'estado', 'precio_venta', 'detalles']
 
 class FotoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Fotos
-        fields = ['imagen', 'producto']
+        fields = ['id', 'ubicacion', 'producto']
 
+    def create(self, validated_data):
+        return Fotos.objects.create(**validated_data)
+
+    def get_imagen_url(self, obj):
+        request = self.context.get('request')
+        if obj.fotos.exists():  # Asegurando que el producto tiene al menos una foto
+            return request.build_absolute_uri(obj.fotos.first().ubicacion.url)
+        return None
 
 
 class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = ['id', 'nombre', 'precio', 'categoria', 'descripcion', 'material', 'stock', 'estado', 'artesano']
+
+
+class PaqueteriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Paqueteria
+        fields = '__all__'
+
+
+class DetalleVentaSerializer(serializers.ModelSerializer):
+    producto = ProductoSerializer()
+    venta = VentaSerializer()
+
+    class Meta:
+        model = DetalleVenta
+        fields = ['venta', 'producto', 'cantidad', 'precio']

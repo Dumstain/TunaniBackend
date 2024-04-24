@@ -90,8 +90,7 @@ class Producto(models.Model):
     descripcion = models.TextField(max_length=256, blank=True, null=True)
     material = models.CharField(max_length=45)
     stock = models.IntegerField()
-    artesano = models.ForeignKey(Artesano, on_delete=models.CASCADE)
-    # Agregamos el campo estado con las opciones definidas
+    artesano = models.ForeignKey('Artesano', on_delete=models.CASCADE)
     estado = models.CharField(max_length=12, choices=ESTADO_OPCIONES, default='no_publicado')
 
     def __str__(self):
@@ -131,8 +130,12 @@ class DetalleVenta(models.Model):
         return f"Detalle {self.id} - {self.venta.id}"
 
 class Fotos(models.Model):
-    ubicacion = models.CharField(max_length=255)
-    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    ubicacion = models.ImageField(upload_to='imagenes_productos/', null=True, blank=True)
+    producto = models.ForeignKey('Producto', related_name='fotos', on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.ubicacion
+        if self.ubicacion and hasattr(self.ubicacion, 'url'):
+            return self.ubicacion.url
+        return "No image available"
+
+
