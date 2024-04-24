@@ -23,10 +23,54 @@ from .serializers import ArtesanoSerializer
 from .models import Artesano
 from .models import Cooperativa
 from .serializers import CooperativaSerializer
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from .models import Cooperativa, Paqueteria
+from .serializers import PaqueteriaSerializer
+from .serializers import VentaSerializer
+from .models import Venta
+
+class PedidosEnProcesoAPIView(APIView):
+    def get(self, request, cooperativa_id):
+        pedidos = Venta.objects.filter(cooperativa_id=cooperativa_id, estado='en_proceso')
+        serializer = VentaSerializer(pedidos, many=True)
+        return Response(serializer.data)
 
 
+class CooperativaPaqueteriaAPIView(APIView):
+    def get(self, request, cooperativa_id):
+        try:
+            cooperativa = Cooperativa.objects.get(pk=cooperativa_id)
+            paqueteria = cooperativa.paqueteria
+            serializer = PaqueteriaSerializer(paqueteria)
+            return Response(serializer.data)
+        except Cooperativa.DoesNotExist:
+            return Response({'error': 'Cooperativa no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        except Paqueteria.DoesNotExist:
+            return Response({'error': 'Paqueteria no encontrada para la cooperativa especificada'}, status=status.HTTP_404_NOT_FOUND)
+
+class AgregarFotosAPIView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, producto_id):
+        producto = get_object_or_404(Producto, pk=producto_id)
+        fotos = request.FILES.getlist('imagen')
+        for foto in fotos:
+            foto_serializer = FotoSerializer(data={'ubicacion': foto, 'producto': producto.pk})
+            if foto_serializer.is_valid():
+                foto_serializer.save()
+            else:
+                return Response(foto_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({"mensaje": "Fotos agregadas correctamente al producto."}, status=status.HTTP_201_CREATED)
 
 
+def get_product_images(request, producto_id):
+    producto = get_object_or_404(Producto, pk=producto_id)
+    fotos = producto.fotos.all()
+    images_urls = [request.build_absolute_uri(foto.ubicacion.url) for foto in fotos if foto.ubicacion]
+    return JsonResponse({'images': images_urls})
+        
 class LoginAPIView(APIView):
     def post(self, request):
         email = request.data.get('email')
@@ -155,18 +199,22 @@ class CooperativaView(APIView):
     
     
 class ListaProductosAPIView(APIView):
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         productos = Producto.objects.all()
-        serializer = ProductoSerializer(productos, many=True)
+        serializer = ProductoSerializer(productos, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)    
     
 class CrearProductoAPIView(APIView):
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
+        print(request.data)  # Agrega esto para ver qué datos están llegando
         serializer = ProductoSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            print(serializer.errors)  # Esto mostrará los errores de validación
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class ModificarProductoAPIView(APIView):
     def put(self, request, pk):
