@@ -29,12 +29,27 @@ from .models import Cooperativa, Paqueteria
 from .serializers import PaqueteriaSerializer
 from .serializers import VentaSerializer
 from .models import Venta
+from rest_framework import generics
 
-class PedidosEnProcesoAPIView(APIView):
-    def get(self, request, cooperativa_id):
-        pedidos = Venta.objects.filter(cooperativa_id=cooperativa_id, estado='en_proceso')
-        serializer = VentaSerializer(pedidos, many=True)
-        return Response(serializer.data)
+class CancelarVentaAPIView(APIView):
+    def patch(self, request, venta_id):
+        try:
+            venta = Venta.objects.get(id=venta_id, estado='Por pagar')
+        except Venta.DoesNotExist:
+            return Response({'error': 'Venta no encontrada o ya no está en estado por pagar.'}, status=status.HTTP_404_NOT_FOUND)
+
+        venta.estado = 'Cancelado'
+        venta.save()
+
+        serializer = VentaSerializer(venta)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class VentasPorCooperativaAPIView(generics.ListAPIView):
+    serializer_class = VentaSerializer
+
+    def get_queryset(self):
+        cooperativa_id = self.kwargs.get('cooperativa_id')
+        return Venta.objects.filter(cooperativa_id=cooperativa_id)
 
 
 class CooperativaPaqueteriaAPIView(APIView):
