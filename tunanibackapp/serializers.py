@@ -89,17 +89,19 @@ class FotoSerializer(serializers.ModelSerializer):
     
 class ProductoSerializer(serializers.ModelSerializer):
     imagen_url = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Producto
-        fields = ['id', 'nombre', 'precio', 'categoria', 'descripcion', 'material', 'stock', 'estado', 'artesano', 'fotos']
+        fields = ['id', 'nombre', 'precio', 'categoria', 'descripcion', 'material', 'stock', 'estado', 'artesano', 'fotos', 'imagen_url']
 
     def get_imagen_url(self, obj):
-        request = self.context.get('request')
-        if obj.imagen and hasattr(obj.imagen, 'url'):
-            return request.build_absolute_uri(obj.imagen.url)
-        else:
-            return None
+        # Solo devolver la URL de la imagen si el contexto lo requiere
+        if self.context.get('show_imagen_url', False):
+            request = self.context.get('request')
+            if obj.fotos.exists():
+                return request.build_absolute_uri(obj.fotos.first().ubicacion.url)
+        return None
+
 
         
 class ComentarioSerializer(serializers.ModelSerializer):
@@ -119,7 +121,8 @@ class VentaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Venta
-        fields = ['id', 'fecha', 'estado', 'precio_venta', 'detalles']
+        fields = ['id', 'fecha', 'hora', 'precio_venta', 'gasto_envio', 'total_sn', 'subtotal', 'estado', 'numero_seguimiento', 'numero_pago', 'metodo_pago', 'cooperativa', 'detalles']
+
 
 class FotoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -135,23 +138,7 @@ class FotoSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.fotos.first().ubicacion.url)
         return None
 
-
-class ProductoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Producto
-        fields = ['id', 'nombre', 'precio', 'categoria', 'descripcion', 'material', 'stock', 'estado', 'artesano']
-
-
 class PaqueteriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Paqueteria
         fields = '__all__'
-
-
-class DetalleVentaSerializer(serializers.ModelSerializer):
-    producto = ProductoSerializer()
-    venta = VentaSerializer()
-
-    class Meta:
-        model = DetalleVenta
-        fields = ['venta', 'producto', 'cantidad', 'precio']
