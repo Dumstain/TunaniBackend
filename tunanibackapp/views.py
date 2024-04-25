@@ -49,6 +49,20 @@ class CooperativaPaqueteriaAPIView(APIView):
         except Paqueteria.DoesNotExist:
             return Response({'error': 'Paqueteria no encontrada para la cooperativa especificada'}, status=status.HTTP_404_NOT_FOUND)
 
+    def patch(self, request, cooperativa_id):
+        try:
+            cooperativa = Cooperativa.objects.get(pk=cooperativa_id)
+            paqueteria = cooperativa.paqueteria
+            serializer = PaqueteriaSerializer(paqueteria, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Cooperativa.DoesNotExist:
+            return Response({'error': 'Cooperativa no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        except Paqueteria.DoesNotExist:
+            return Response({'error': 'Paquetería no encontrada para la cooperativa especificada'}, status=status.HTTP_404_NOT_FOUND)
+
 class AgregarFotosAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
 
@@ -63,7 +77,7 @@ class AgregarFotosAPIView(APIView):
                 return Response(foto_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         return Response({"mensaje": "Fotos agregadas correctamente al producto."}, status=status.HTTP_201_CREATED)
-
+    
 
 def get_product_images(request, producto_id):
     producto = get_object_or_404(Producto, pk=producto_id)
@@ -138,6 +152,16 @@ class UsuarioRepresentanteDetalle(APIView):
             return Response(serializer.data)
         except Usuario.DoesNotExist:
             return Response({'mensaje': 'El usuario representante no existe'}, status=status.HTTP_404_NOT_FOUND)   
+    def patch(self, request, pk):
+        try:
+            usuario = Usuario.objects.get(pk=pk, rol=2)  # Asumiendo que el rol 2 corresponde a representante
+            serializer = UsuarioSerializer(usuario, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Usuario.DoesNotExist:
+            return Response({'mensaje': 'El usuario representante no existe'}, status=status.HTTP_404_NOT_FOUND)
     
 
 class ListaArtesanosAPIView(APIView):
