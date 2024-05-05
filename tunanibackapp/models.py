@@ -137,5 +137,14 @@ class Fotos(models.Model):
         if self.ubicacion and hasattr(self.ubicacion, 'url'):
             return self.ubicacion.url
         return "No image available"
+    
+class FotoCooperativa(models.Model):
+    ubicacion = models.ImageField(upload_to='imagenes_cooperativas/', null=True, blank=True)
+    cooperativa = models.OneToOneField('Cooperativa', related_name='foto', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.ubicacion.url if self.ubicacion else "No image available"
+
+    
 
 

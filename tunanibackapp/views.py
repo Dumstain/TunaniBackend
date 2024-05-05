@@ -1,10 +1,11 @@
 from django.shortcuts import render
+import os
 from django.shortcuts import get_object_or_404
 # Create your views here.
 from rest_framework import status, permissions, viewsets
 from rest_framework.response import Response
-from .models import Usuario
-from .serializers import UsuarioSerializer
+from .models import FotoCooperativa, Usuario
+from .serializers import FotoCooperativaSerializer, UsuarioSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -30,6 +31,9 @@ from .serializers import PaqueteriaSerializer
 from .serializers import VentaSerializer
 from .models import Venta
 from rest_framework import generics
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.storage import default_storage
+
 
 class CancelarVentaAPIView(APIView):
     def patch(self, request, venta_id):
@@ -226,16 +230,21 @@ class ListaCooperativasAPIView(APIView):
         serializer = CooperativaSerializer(cooperativas, many=True)
         return Response(serializer.data)
     
-    
 class CooperativaView(APIView):
     def get(self, request, usuario_id):
-        try:
-            cooperativa = Cooperativa.objects.get(usuario=usuario_id)
-            serializer = CooperativaSerializer(cooperativa)
+        cooperativa = get_object_or_404(Cooperativa, usuario=usuario_id)
+        # Pasa el contexto con el request al serializer
+        serializer = CooperativaSerializer(cooperativa, context={'request': request})
+        return Response(serializer.data)
+
+    def patch(self, request, usuario_id):
+        cooperativa = get_object_or_404(Cooperativa, usuario=usuario_id)
+        # Asegúrate de pasar el contexto con el request al serializer
+        serializer = CooperativaSerializer(cooperativa, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
             return Response(serializer.data)
-        except Cooperativa.DoesNotExist:
-            return Response({'error': 'No se encontró la cooperativa asociada al usuario'}, status=status.HTTP_404_NOT_FOUND)
-    
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class ListaProductosAPIView(APIView):
     def get(self, request, *args, **kwargs):
@@ -287,3 +296,36 @@ class AgregarFotosAPIView(APIView):
                 return Response(foto_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         return Response({"mensaje": "Fotos agregadas correctamente al producto."}, status=status.HTTP_201_CREATED)
+
+class AgregarFotoCooperativaAPIView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, pk):
+        cooperativa = get_object_or_404(Cooperativa, pk=pk)
+        foto = request.FILES.get('imagen')
+        
+        if not foto:
+            return Response({"error": "No image provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Eliminar la imagen existente si existe
+        try:
+            if hasattr(cooperativa, 'foto') and cooperativa.foto:
+                if cooperativa.foto.ubicacion:
+                    # Borrar el archivo físico
+                    if default_storage.exists(cooperativa.foto.ubicacion.path):
+                        default_storage.delete(cooperativa.foto.ubicacion.path)
+                    # Borrar el objeto de foto
+                    cooperativa.foto.delete()
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Crear o actualizar la imagen
+        foto_instance, created = FotoCooperativa.objects.update_or_create(
+            cooperativa=cooperativa,
+            defaults={'ubicacion': foto}
+        )
+
+        return Response({
+            "mensaje": "Imagen actualizada correctamente.",
+            "imagen_url": request.build_absolute_uri(foto_instance.ubicacion.url)
+        }, status=status.HTTP_201_CREATED)

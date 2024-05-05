@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from tunanibackapp.views import LoginAPIView
-from tunanibackapp.views import VentasPorCooperativaAPIView,CancelarVentaAPIView,CooperativaPaqueteriaAPIView, get_product_images,AgregarFotosAPIView,RegistroUsuarioAPIView,UsuarioRepresentanteDetalle,CooperativaView,ActualizarArtesanoAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
+from tunanibackapp.views import VentasPorCooperativaAPIView,AgregarFotoCooperativaAPIView,CancelarVentaAPIView,CooperativaPaqueteriaAPIView, get_product_images,AgregarFotosAPIView,RegistroUsuarioAPIView,UsuarioRepresentanteDetalle,CooperativaView,ActualizarArtesanoAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
 from django.conf.urls.static import static
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -42,9 +42,11 @@ urlpatterns = [
     path('api/cooperativa/<int:usuario_id>/', CooperativaView.as_view(), name='cooperativa_por_usuario'),
     path('api/usuario/representante/<int:pk>/', UsuarioRepresentanteDetalle.as_view(), name='detalle-usuario-representante'),
     path('api/subir-foto/', AgregarFotosAPIView.as_view(), name='subir_foto'),
+    path('api/subir-foto-cooperativa/<int:pk>/', AgregarFotoCooperativaAPIView.as_view(), name='subir_foto'),
     path('api/producto/<int:producto_id>/imagenes/', get_product_images, name='producto_imagenes'),
     path('api/cooperativas/<int:cooperativa_id>/paqueteria/', CooperativaPaqueteriaAPIView.as_view(), name='cooperativa-paqueteria'),
     path('api/cooperativas/<int:cooperativa_id>/ventas/', VentasPorCooperativaAPIView.as_view(), name='ventas_por_cooperativa'),
     path('api/ventas/<int:venta_id>/cancelar/', CancelarVentaAPIView.as_view(), name='cancelar-venta'),
+
     
     ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

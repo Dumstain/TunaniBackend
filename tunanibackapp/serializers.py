@@ -5,7 +5,7 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model, authenticate
 from rest_framework import exceptions
 from .models import Producto
-from .models import Fotos
+from .models import Fotos, FotoCooperativa
 from django.conf import settings
 from .models import DetalleVenta
 
@@ -29,6 +29,12 @@ class DatosSerializer(serializers.ModelSerializer):
     class Meta:
         model = Datos
         fields = ['nombre', 'materno', 'paterno', 'tel', 'ine', 'metodo_pago', 'notificaciones']
+        
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 class UsuarioSerializer(serializers.ModelSerializer):
     datos = DatosSerializer()
@@ -53,7 +59,25 @@ class UsuarioSerializer(serializers.ModelSerializer):
         usuario.datos = datos
         usuario.save()
         
+
         return usuario
+    
+    def update(self, instance, validated_data):
+        datos_data = validated_data.pop('datos', None)
+        datos_serializer = self.fields['datos']
+
+        # Actualiza los campos normales del Usuario
+        for attr, value in validated_data.items():
+            if attr in self.Meta.fields:
+                setattr(instance, attr, value)
+
+        # Actualiza los campos de Datos si datos_data no es None
+        if datos_data:
+            datos_instance = instance.datos
+            datos_serializer.update(datos_instance, datos_data)
+
+        instance.save()
+        return instance
 
 class RolSerializer(serializers.ModelSerializer):
     class Meta:
@@ -61,10 +85,22 @@ class RolSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+from rest_framework import serializers
+
 class CooperativaSerializer(serializers.ModelSerializer):
+    imagen_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Cooperativa
-        fields = '__all__'
+        fields = '__all__'  # Asegúrate de incluir 'imagen_url' si decides listar los campos explícitamente
+
+    def get_imagen_url(self, obj):
+        request = self.context.get('request')
+        if obj.foto and hasattr(obj.foto, 'ubicacion') and obj.foto.ubicacion:
+            if request:
+                return request.build_absolute_uri(obj.foto.ubicacion.url)
+        return None
+
 
 class ArtesanoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -142,3 +178,17 @@ class PaqueteriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Paqueteria
         fields = '__all__'
+        
+class FotoCooperativaSerializer(serializers.ModelSerializer):
+    imagen_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FotoCooperativa
+        fields = ['id', 'ubicacion', 'imagen_url', 'cooperativa']
+
+    def get_imagen_url(self, obj):
+        return obj.ubicacion.url if obj.ubicacion else None
+
+    def create(self, validated_data):
+        return FotoCooperativa.objects.create(**validated_data)
+
