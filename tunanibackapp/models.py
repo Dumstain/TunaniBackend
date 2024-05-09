@@ -67,7 +67,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
 class Token(models.Model):
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name='token')
     token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)    
-
+    
 class Paqueteria(models.Model):
     nombre = models.CharField(max_length=45)
     estado = models.CharField(max_length=45)
@@ -78,6 +78,7 @@ class Paqueteria(models.Model):
     tel = models.CharField(max_length=15)
     email = models.EmailField()
     servicio_ofrecido = models.CharField(max_length=45, blank=True, null=True)
+    cooperativa = models.ForeignKey('Cooperativa', on_delete=models.CASCADE, related_name='paqueterias')
 
     def __str__(self):
         return self.nombre
@@ -89,10 +90,11 @@ class Cooperativa(models.Model):
     descripcion = models.TextField(max_length=256, blank=True, null=True)
     rfc = models.CharField(max_length=15)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
-    paqueteria = models.ForeignKey(Paqueteria, on_delete=models.CASCADE)
+    paqueteria_asignada = models.OneToOneField(Paqueteria, on_delete=models.SET_NULL, null=True, blank=True, related_name='cooperativa_asignada')
 
     def __str__(self):
         return self.nombre
+
 
 class Artesano(models.Model):
     nombre = models.CharField(max_length=45)
@@ -130,6 +132,13 @@ class Producto(models.Model):
         return self.nombre
 
 class Venta(models.Model):
+    ESTADO_PEDIDO_OPCIONES = (
+        ('pendiente', 'Pendiente'),
+        ('confirmado', 'Confirmado'),
+        ('entregado', 'Entregado'),
+        ('cancelado', 'Cancelado'),
+    )
+
     fecha = models.DateField()
     hora = models.TimeField()
     precio_venta = models.FloatField(blank=True, null=True)
@@ -140,10 +149,12 @@ class Venta(models.Model):
     numero_seguimiento = models.CharField(max_length=45, blank=True, null=True)
     numero_pago = models.CharField(max_length=45, blank=True, null=True)
     metodo_pago = models.CharField(max_length=45, blank=True, null=True)
+    estado_pedido = models.CharField(max_length=12, choices=ESTADO_PEDIDO_OPCIONES, default='pendiente')
     cooperativa = models.ForeignKey(Cooperativa, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"Venta {self.id} - {self.fecha}"
+
 
 class Comentario(models.Model):
     comentario = models.TextField(max_length=255, blank=True, null=True)
@@ -154,13 +165,14 @@ class Comentario(models.Model):
         return f"Comentario {self.id} - {self.producto.nombre}"
 
 class DetalleVenta(models.Model):
-    venta = models.ForeignKey(Venta, on_delete=models.CASCADE)
+    venta = models.ForeignKey(Venta, on_delete=models.CASCADE, related_name='detalles')
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     cantidad = models.IntegerField()
     precio = models.FloatField()
 
     def __str__(self):
         return f"Detalle {self.id} - {self.venta.id}"
+
 
 class Fotos(models.Model):
     ubicacion = models.ImageField(upload_to='imagenes_productos/', null=True, blank=True)

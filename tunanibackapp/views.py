@@ -49,12 +49,46 @@ class CancelarVentaAPIView(APIView):
         serializer = VentaSerializer(venta)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class VentaUpdateAPIView(generics.UpdateAPIView):
+    queryset = Venta.objects.all()
+    serializer_class = VentaSerializer
+    lookup_field = 'pk'
+
+    def patch(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
+
+
+from django.utils.dateparse import parse_date
+
 class VentasPorCooperativaAPIView(generics.ListAPIView):
     serializer_class = VentaSerializer
 
     def get_queryset(self):
         cooperativa_id = self.kwargs.get('cooperativa_id')
-        return Venta.objects.filter(cooperativa_id=cooperativa_id)
+        estado = self.request.query_params.get('estado', None)
+        excluir_estado = self.request.query_params.get('excluir_estado', None)
+        fecha_inicio = self.request.query_params.get('fecha_inicio', None)
+        fecha_fin = self.request.query_params.get('fecha_fin', None)
+        
+        queryset = Venta.objects.filter(cooperativa_id=cooperativa_id)
+        
+        if estado:
+            queryset = queryset.filter(estado_pedido=estado)
+        if excluir_estado:
+            queryset = queryset.exclude(estado_pedido=excluir_estado)
+        
+        if fecha_inicio:
+            fecha_inicio = parse_date(fecha_inicio)
+            if fecha_inicio:
+                queryset = queryset.filter(fecha__gte=fecha_inicio)
+        
+        if fecha_fin:
+            fecha_fin = parse_date(fecha_fin)
+            if fecha_fin:
+                queryset = queryset.filter(fecha__lte=fecha_fin)
+        
+        return queryset
+
 
 
 from rest_framework import status
@@ -76,11 +110,18 @@ class CooperativaPaqueteriaAPIView(APIView):
             return Response({'error': 'Cooperativa no encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, cooperativa_id):
-        serializer = PaqueteriaSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(cooperativa=cooperativa_id)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            cooperativa = Cooperativa.objects.get(pk=cooperativa_id)
+            serializer = PaqueteriaSerializer(data=request.data)
+            if serializer.is_valid():
+                paqueteria = serializer.save(cooperativa=cooperativa)
+                if not cooperativa.paqueteria_asignada:
+                    cooperativa.paqueteria_asignada = paqueteria
+                    cooperativa.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Cooperativa.DoesNotExist:
+            return Response({'error': 'Cooperativa no encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
     def patch(self, request, cooperativa_id, paqueteria_id):
         try:
@@ -89,15 +130,9 @@ class CooperativaPaqueteriaAPIView(APIView):
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
-            else:
-                logger.error(f"Errores de validación: {serializer.errors}")
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Paqueteria.DoesNotExist:
-            logger.error(f"Paquetería no encontrada con ID: {paqueteria_id} y cooperativa ID: {cooperativa_id}")
             return Response({'error': 'Paquetería no encontrada'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            logger.error(f"Error al actualizar la paquetería: {str(e)}")
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, cooperativa_id, paqueteria_id):
         try:
@@ -106,6 +141,7 @@ class CooperativaPaqueteriaAPIView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Paqueteria.DoesNotExist:
             return Response({'error': 'Paquetería no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        
         
 from rest_framework.generics import ListAPIView
 class ListarPaqueteriasAPIView(ListAPIView):
@@ -187,7 +223,7 @@ class RegistroUsuarioAPIView(APIView):
         if serializer.is_valid():
             usuario = serializer.save()
             # Crear y guardar el token para el usuario
-            Token.objects.create(user=usuario)
+            Token.objects.create(usuario=usuario)
             return Response({"message": "Usuario registrado con éxito"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -231,7 +267,27 @@ class UsuarioRepresentanteDetalle(APIView):
         except Usuario.DoesNotExist:
             return Response({'mensaje': 'El usuario representante no existe'}, status=status.HTTP_404_NOT_FOUND)
     
+class UsuarioCompradorDetalle(APIView):
+    def get(self, request, pk):
+        try:
+            usuario = Usuario.objects.get(pk=pk, rol=3)  # Asumiendo que el rol 3 corresponde a comprador
+            serializer = UsuarioSerializer(usuario)
+            return Response(serializer.data)
+        except Usuario.DoesNotExist:
+            return Response({'mensaje': 'El usuario comprador no existe'}, status=status.HTTP_404_NOT_FOUND)
 
+    def patch(self, request, pk):
+        try:
+            usuario = Usuario.objects.get(pk=pk, rol=3)  # Asumiendo que el rol 3 corresponde a comprador
+            serializer = UsuarioSerializer(usuario, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Usuario.DoesNotExist:
+            return Response({'mensaje': 'El usuario comprador no existe'}, status=status.HTTP_404_NOT_FOUND)
+        
+        
 class ListaArtesanosAPIView(APIView):
     def get(self, request):
         artesanos = Artesano.objects.all()

@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from tunanibackapp.views import LoginAPIView
-from tunanibackapp.views import ListarPaqueteriasAPIView, CambiarPaqueteriaAPIView,VentasPorCooperativaAPIView,AgregarFotoCooperativaAPIView,CancelarVentaAPIView,CooperativaPaqueteriaAPIView, get_product_images,AgregarFotosAPIView,RegistroUsuarioAPIView,UsuarioRepresentanteDetalle,CooperativaView,ActualizarArtesanoAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
+from tunanibackapp.views import ListarPaqueteriasAPIView, UsuarioCompradorDetalle ,VentaUpdateAPIView ,CambiarPaqueteriaAPIView,VentasPorCooperativaAPIView,AgregarFotoCooperativaAPIView,CancelarVentaAPIView,CooperativaPaqueteriaAPIView, get_product_images,AgregarFotosAPIView,RegistroUsuarioAPIView,UsuarioRepresentanteDetalle,CooperativaView,ActualizarArtesanoAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
 from django.conf.urls.static import static
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -50,5 +50,8 @@ urlpatterns = [
     path('api/ventas/<int:venta_id>/cancelar/', CancelarVentaAPIView.as_view(), name='cancelar-venta'),
     path('api/paqueterias/', ListarPaqueteriasAPIView.as_view(), name='listar-paqueterias'),
     path('api/cooperativas/<int:cooperativa_id>/cambiar-paqueteria/', CambiarPaqueteriaAPIView.as_view(), name='cambiar-paqueteria'),    
+    path('api/ventas/<int:pk>/update/', VentaUpdateAPIView.as_view(), name='venta-update'),
+    path('api/usuario/comprador/<int:pk>/', UsuarioCompradorDetalle.as_view(), name='usuario_comprador_detalle'),
+    
     
     ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

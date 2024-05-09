@@ -60,6 +60,15 @@ class UsuarioSerializer(serializers.ModelSerializer):
         usuario.save()
         return usuario
 
+    def update(self, instance, validated_data):
+        datos_data = validated_data.pop('datos', None)
+        if datos_data:
+            datos_serializer = self.fields['datos']
+            datos_instance = instance.datos
+            datos_serializer.update(datos_instance, datos_data)
+        return super().update(instance, validated_data)
+
+
 class RolSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rol
@@ -81,6 +90,7 @@ class CooperativaSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.foto.ubicacion.url)
         return None
+    
 
 
 class ArtesanoSerializer(serializers.ModelSerializer):
@@ -127,19 +137,29 @@ class ComentarioSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class DetalleVentaSerializer(serializers.ModelSerializer):
-    producto = ProductoSerializer()
+    producto = ProductoSerializer(read_only=True)  # Usa el nested serializer para Producto
 
     class Meta:
         model = DetalleVenta
-        fields = ['producto', 'cantidad', 'precio']
+        fields = ['id', 'producto', 'cantidad', 'precio']
 
 class VentaSerializer(serializers.ModelSerializer):
-    detalles = DetalleVentaSerializer(source='detalleventa_set', many=True)
+    detalles = DetalleVentaSerializer(many=True)
 
     class Meta:
         model = Venta
-        fields = ['id', 'fecha', 'hora', 'precio_venta', 'gasto_envio', 'total_sn', 'subtotal', 'estado', 'numero_seguimiento', 'numero_pago', 'metodo_pago', 'cooperativa', 'detalles']
+        fields = [
+            'id', 'fecha', 'hora', 'precio_venta', 'gasto_envio', 'total_sn',
+            'subtotal', 'estado', 'numero_seguimiento', 'numero_pago',
+            'metodo_pago', 'estado_pedido', 'cooperativa', 'detalles'
+        ]
 
+    def create(self, validated_data):
+        detalles_data = validated_data.pop('detalles')
+        venta = Venta.objects.create(**validated_data)
+        for detalle_data in detalles_data:
+            DetalleVenta.objects.create(venta=venta, **detalle_data)
+        return venta
 
 class FotoSerializer(serializers.ModelSerializer):
     class Meta:
