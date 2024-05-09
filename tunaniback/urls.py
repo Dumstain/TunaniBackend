@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from tunanibackapp.views import LoginAPIView
-from tunanibackapp.views import VentasPorCooperativaAPIView,AgregarFotoCooperativaAPIView,CancelarVentaAPIView,CooperativaPaqueteriaAPIView, get_product_images,AgregarFotosAPIView,RegistroUsuarioAPIView,UsuarioRepresentanteDetalle,CooperativaView,ActualizarArtesanoAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
+from tunanibackapp.views import ListarPaqueteriasAPIView, CambiarPaqueteriaAPIView,VentasPorCooperativaAPIView,AgregarFotoCooperativaAPIView,CancelarVentaAPIView,CooperativaPaqueteriaAPIView, get_product_images,AgregarFotosAPIView,RegistroUsuarioAPIView,UsuarioRepresentanteDetalle,CooperativaView,ActualizarArtesanoAPIView,ListaCooperativasAPIView,CrearProductoAPIView,AgregarArtesanoAPIView, EliminarArtesanoAPIView,ListaArtesanosAPIView, ModificarProductoAPIView, BorrarProductoAPIView, AgregarFotosAPIView,ListaProductosAPIView
 from django.conf.urls.static import static
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -28,7 +28,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/login/', LoginAPIView.as_view(), name='api_login'),
-    path('registro/', RegistroUsuarioAPIView.as_view(), name='registro_usuario'),
+    path('api/registro/', RegistroUsuarioAPIView.as_view(), name='registro_usuario'),
     path('api/productos/', ListaProductosAPIView.as_view(), name='lista_productos'),
     path('api/productos/crear/', CrearProductoAPIView.as_view(), name='crear_producto'),
     path('api/productos/modificar/<int:pk>/', ModificarProductoAPIView.as_view(), name='modificar_producto'),
@@ -44,9 +44,11 @@ urlpatterns = [
     path('api/subir-foto/', AgregarFotosAPIView.as_view(), name='subir_foto'),
     path('api/subir-foto-cooperativa/<int:pk>/', AgregarFotoCooperativaAPIView.as_view(), name='subir_foto'),
     path('api/producto/<int:producto_id>/imagenes/', get_product_images, name='producto_imagenes'),
+    path('api/cooperativas/<int:cooperativa_id>/paqueteria/<int:paqueteria_id>/', CooperativaPaqueteriaAPIView.as_view(), name='paqueteria-detail'),
     path('api/cooperativas/<int:cooperativa_id>/paqueteria/', CooperativaPaqueteriaAPIView.as_view(), name='cooperativa-paqueteria'),
     path('api/cooperativas/<int:cooperativa_id>/ventas/', VentasPorCooperativaAPIView.as_view(), name='ventas_por_cooperativa'),
     path('api/ventas/<int:venta_id>/cancelar/', CancelarVentaAPIView.as_view(), name='cancelar-venta'),
-
+    path('api/paqueterias/', ListarPaqueteriasAPIView.as_view(), name='listar-paqueterias'),
+    path('api/cooperativas/<int:cooperativa_id>/cambiar-paqueteria/', CambiarPaqueteriaAPIView.as_view(), name='cambiar-paqueteria'),    
     
     ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
