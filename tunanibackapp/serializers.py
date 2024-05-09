@@ -35,7 +35,7 @@ class DatosSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
-
+    
 class UsuarioSerializer(serializers.ModelSerializer):
     datos = DatosSerializer()
     
@@ -47,37 +47,18 @@ class UsuarioSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         datos_data = validated_data.pop('datos')
         datos = Datos.objects.create(**datos_data)
-        usuario = Usuario(**validated_data)
+        contrasenia = make_password(validated_data.pop('contrasenia'))
+        
+        usuario = Usuario(contrasenia=contrasenia, **validated_data)
         
         try:
             usuario.rol = Rol.objects.get(id=3)  # Asumiendo que 3 es el ID para "comprador"
         except Rol.DoesNotExist:
-            # Manejar el caso de que el rol no exista. Podrías crear el rol aquí o lanzar una excepción.
             raise serializers.ValidationError("Rol 'comprador' no encontrado.")
         
-        usuario.contrasenia = make_password(usuario.contrasenia)
         usuario.datos = datos
         usuario.save()
-        
-
         return usuario
-    
-    def update(self, instance, validated_data):
-        datos_data = validated_data.pop('datos', None)
-        datos_serializer = self.fields['datos']
-
-        # Actualiza los campos normales del Usuario
-        for attr, value in validated_data.items():
-            if attr in self.Meta.fields:
-                setattr(instance, attr, value)
-
-        # Actualiza los campos de Datos si datos_data no es None
-        if datos_data:
-            datos_instance = instance.datos
-            datos_serializer.update(datos_instance, datos_data)
-
-        instance.save()
-        return instance
 
 class RolSerializer(serializers.ModelSerializer):
     class Meta:

@@ -33,6 +33,7 @@ from .models import Venta
 from rest_framework import generics
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import default_storage
+from django.contrib.auth import authenticate
 
 
 class CancelarVentaAPIView(APIView):
@@ -56,31 +57,78 @@ class VentasPorCooperativaAPIView(generics.ListAPIView):
         return Venta.objects.filter(cooperativa_id=cooperativa_id)
 
 
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .models import Cooperativa, Paqueteria
+from .serializers import PaqueteriaSerializer
+import logging
+
+logger = logging.getLogger(__name__)
+
 class CooperativaPaqueteriaAPIView(APIView):
     def get(self, request, cooperativa_id):
         try:
-            cooperativa = Cooperativa.objects.get(pk=cooperativa_id)
-            paqueteria = cooperativa.paqueteria
-            serializer = PaqueteriaSerializer(paqueteria)
+            paqueterias = Paqueteria.objects.filter(cooperativa=cooperativa_id)
+            serializer = PaqueteriaSerializer(paqueterias, many=True)
             return Response(serializer.data)
         except Cooperativa.DoesNotExist:
             return Response({'error': 'Cooperativa no encontrada'}, status=status.HTTP_404_NOT_FOUND)
-        except Paqueteria.DoesNotExist:
-            return Response({'error': 'Paqueteria no encontrada para la cooperativa especificada'}, status=status.HTTP_404_NOT_FOUND)
 
-    def patch(self, request, cooperativa_id):
+    def post(self, request, cooperativa_id):
+        serializer = PaqueteriaSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(cooperativa=cooperativa_id)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, cooperativa_id, paqueteria_id):
         try:
-            cooperativa = Cooperativa.objects.get(pk=cooperativa_id)
-            paqueteria = cooperativa.paqueteria
+            paqueteria = Paqueteria.objects.get(pk=paqueteria_id, cooperativa=cooperativa_id)
             serializer = PaqueteriaSerializer(paqueteria, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Cooperativa.DoesNotExist:
-            return Response({'error': 'Cooperativa no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                logger.error(f"Errores de validación: {serializer.errors}")
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Paqueteria.DoesNotExist:
-            return Response({'error': 'Paquetería no encontrada para la cooperativa especificada'}, status=status.HTTP_404_NOT_FOUND)
+            logger.error(f"Paquetería no encontrada con ID: {paqueteria_id} y cooperativa ID: {cooperativa_id}")
+            return Response({'error': 'Paquetería no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error al actualizar la paquetería: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete(self, request, cooperativa_id, paqueteria_id):
+        try:
+            paqueteria = Paqueteria.objects.get(pk=paqueteria_id, cooperativa=cooperativa_id)
+            paqueteria.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Paqueteria.DoesNotExist:
+            return Response({'error': 'Paquetería no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+        
+from rest_framework.generics import ListAPIView
+class ListarPaqueteriasAPIView(ListAPIView):
+    queryset = Paqueteria.objects.all()
+    serializer_class = PaqueteriaSerializer        
+    
+class CambiarPaqueteriaAPIView(APIView):
+    def patch(self, request, cooperativa_id):
+        nueva_paqueteria_id = request.data.get('paqueteria_id')
+        if not nueva_paqueteria_id:
+            return Response({"error": "Paquetería ID es requerido"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            cooperativa = Cooperativa.objects.get(pk=cooperativa_id)
+            nueva_paqueteria = Paqueteria.objects.get(pk=nueva_paqueteria_id)
+            cooperativa.paqueteria = nueva_paqueteria
+            cooperativa.save()
+            return Response({"mensaje": "Paquetería actualizada correctamente."}, status=status.HTTP_200_OK)
+        except Cooperativa.DoesNotExist:
+            return Response({"error": "Cooperativa no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+        except Paqueteria.DoesNotExist:
+            return Response({"error": "Paquetería no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
 
 class AgregarFotosAPIView(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -108,39 +156,40 @@ class LoginAPIView(APIView):
     def post(self, request):
         email = request.data.get('email')
         contrasenia = request.data.get('contrasenia')
-        
+
+        if not email or not contrasenia:
+            return Response({"message": "Email y contraseña son requeridos"}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             usuario = Usuario.objects.get(email=email)
         except Usuario.DoesNotExist:
             return Response({"message": "Email inválido"}, status=status.HTTP_404_NOT_FOUND)
-        
+
         if not check_password(contrasenia, usuario.contrasenia):
             return Response({"message": "Contraseña inválida"}, status=status.HTTP_404_NOT_FOUND)
-        
+
         token, created = Token.objects.get_or_create(usuario=usuario)
 
-        # Aquí incluimos los datos adicionales en la respuesta
         respuesta = {
             "token": str(token.token),
             "usuario": usuario.nombre_user,
-            "rol": usuario.rol.nombre_rol,  # Asegúrate de que tu modelo Rol tenga un campo 'nombre_rol'
-            "id":usuario.id,
+            "rol": usuario.rol.nombre_rol,
+            "id": usuario.id,
             "mensaje": f"Has sido logeado como {usuario.rol.nombre_rol}"
         }
 
         return Response(respuesta, status=status.HTTP_200_OK)
-
-
+    
+    
 class RegistroUsuarioAPIView(APIView):
     def post(self, request):
         serializer = UsuarioSerializer(data=request.data)
         if serializer.is_valid():
             usuario = serializer.save()
             # Crear y guardar el token para el usuario
-            Token.objects.create(usuario=usuario)
+            Token.objects.create(user=usuario)
             return Response({"message": "Usuario registrado con éxito"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
 
 
